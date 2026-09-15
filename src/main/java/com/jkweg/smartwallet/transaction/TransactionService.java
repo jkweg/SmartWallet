@@ -4,6 +4,7 @@ package com.jkweg.smartwallet.transaction;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -54,6 +55,35 @@ class TransactionService {
         modifiedTransaction.setDescription(transactionRequest.description());
 
         return modifiedTransaction;
+    }
+
+    public BigDecimal getBalance(){
+
+        BigDecimal income = repository.getSumByType(TransactionType.INCOME);
+        BigDecimal expense = repository.getSumByType(TransactionType.EXPENSE);
+
+        return income.subtract(expense);
+    }
+
+    public TransactionSummary getSummary(){
+        BigDecimal income = repository.getSumByType(TransactionType.INCOME);
+        BigDecimal expense = repository.getSumByType(TransactionType.EXPENSE);
+
+        BigDecimal balance = income.subtract(expense);
+
+        return new TransactionSummary(income,expense,balance);
+    }
+
+    public List<Transaction> findByType(TransactionType type){
+        return repository.findByType(type);
+    }
+
+    public List<Transaction> findByCategory(TransactionCategory category){
+        return repository.findByCategory(category);
+    }
+
+    public List<Transaction> findByTypeAndCategory(TransactionType type, TransactionCategory category){
+        return repository.findByTypeAndCategory(type, category);
     }
 
 }
