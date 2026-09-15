@@ -1,6 +1,7 @@
 package com.jkweg.smartwallet.transaction;
 
 
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +17,10 @@ class TransactionController {
         this.service = service;
     }
 
+    @ResponseStatus(value = HttpStatus.CREATED)
     @PostMapping
-    Transaction addTransaction(@RequestBody Transaction transaction){
-        return service.addTransaction(transaction);
+    Transaction addTransaction(@Valid @RequestBody TransactionRequest transactionRequest){
+        return service.addTransaction(transactionRequest);
     }
 
     @GetMapping
@@ -38,8 +40,8 @@ class TransactionController {
     }
 
     @PutMapping("/{id}")
-    Transaction modifyTransaction(@RequestBody Transaction transaction, @PathVariable Long id){
-        return service.modifyTransaction(id,transaction);
+    Transaction modifyTransaction(@Valid @RequestBody TransactionRequest transactionRequest, @PathVariable Long id){
+        return service.modifyTransaction(id,transactionRequest);
     }
 
 }

@@ -2,6 +2,10 @@ package com.jkweg.smartwallet.transaction;
 
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,7 +30,7 @@ class Transaction {
 
     protected Transaction(){}
 
-    Transaction(BigDecimal amount, TransactionType type, LocalDate date, String description,TransactionCategory category){
+    Transaction(BigDecimal amount, TransactionType type, TransactionCategory category, LocalDate date, String description){
 
         this.amount = amount;
         this.type = type;

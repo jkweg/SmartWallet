@@ -1,6 +1,7 @@
 package com.jkweg.smartwallet.transaction;
 
 
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,7 +15,15 @@ class TransactionService {
         this.repository = repository;
     }
 
-    public Transaction addTransaction(Transaction transaction){
+    public Transaction addTransaction(TransactionRequest transactionRequest){
+
+        Transaction transaction = new Transaction(
+                transactionRequest.amount(),
+                transactionRequest.type(),
+                transactionRequest.category(),
+                transactionRequest.date(),
+                transactionRequest.description());
+
         return repository.save(transaction);
     }
 
@@ -33,16 +42,18 @@ class TransactionService {
         repository.deleteById(id);
     }
 
-    public Transaction modifyTransaction(Long id, Transaction transaction){
+    @Transactional
+    public Transaction modifyTransaction(Long id, TransactionRequest transactionRequest){
+
         Transaction modifiedTransaction = getTransaction(id);
 
-        modifiedTransaction.setAmount(transaction.getAmount());
-        modifiedTransaction.setCategory(transaction.getCategory());
-        modifiedTransaction.setDate(transaction.getDate());
-        modifiedTransaction.setType(transaction.getType());
-        modifiedTransaction.setDescription(transaction.getDescription());
+        modifiedTransaction.setAmount(transactionRequest.amount());
+        modifiedTransaction.setCategory(transactionRequest.category());
+        modifiedTransaction.setDate(transactionRequest.date());
+        modifiedTransaction.setType(transactionRequest.type());
+        modifiedTransaction.setDescription(transactionRequest.description());
 
-        return repository.save(modifiedTransaction);
+        return modifiedTransaction;
     }
 
 }
