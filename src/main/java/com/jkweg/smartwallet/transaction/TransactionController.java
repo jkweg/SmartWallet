@@ -2,10 +2,12 @@ package com.jkweg.smartwallet.transaction;
 
 
 import jakarta.validation.Valid;
+import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -26,20 +28,11 @@ class TransactionController {
 
     @GetMapping
     List<Transaction> getAllTransactions(@RequestParam(required = false) TransactionType type,
-                                         @RequestParam(required = false) TransactionCategory category){
-        if (type == null && category == null){
-            return service.getAllTransactions();
-        }
-        else if (type != null && category == null)
-        {
-            return service.findByType(type);
-        }
-        else if (type == null){
-            return service.findByCategory(category);
-        }
-        else{
-            return service.findByTypeAndCategory(type,category);
-        }
+                                         @RequestParam(required = false) TransactionCategory category,
+                                         @RequestParam(required = false) LocalDate from,
+                                         @RequestParam(required = false) LocalDate to){
+
+        return service.findTransactions(type,category,from,to);
     }
 
     @GetMapping("/{id}")
@@ -67,5 +60,6 @@ class TransactionController {
     TransactionSummary getSummary(){
         return service.getSummary();
     }
+
 
 }

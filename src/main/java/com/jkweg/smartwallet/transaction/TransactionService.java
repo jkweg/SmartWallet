@@ -2,10 +2,14 @@ package com.jkweg.smartwallet.transaction;
 
 
 import jakarta.transaction.Transactional;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+
+import static com.jkweg.smartwallet.transaction.TransactionSpecification.*;
 
 @Service
 class TransactionService {
@@ -74,16 +78,12 @@ class TransactionService {
         return new TransactionSummary(income,expense,balance);
     }
 
-    public List<Transaction> findByType(TransactionType type){
-        return repository.findByType(type);
-    }
-
-    public List<Transaction> findByCategory(TransactionCategory category){
-        return repository.findByCategory(category);
-    }
-
-    public List<Transaction> findByTypeAndCategory(TransactionType type, TransactionCategory category){
-        return repository.findByTypeAndCategory(type, category);
+    public List<Transaction> findTransactions(TransactionType type, TransactionCategory category, LocalDate from, LocalDate to){
+        if(from != null && to != null && from.isAfter(to)){
+            throw new InvalidDateRangeException();
+        }
+        Specification<Transaction> spec = Specification.allOf(hasType(type),hasCategory(category),dateFrom(from),dateTo(to));
+        return repository.findAll(spec);
     }
 
 }
