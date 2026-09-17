@@ -3,6 +3,7 @@ package com.jkweg.smartwallet.investment;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -17,15 +18,23 @@ class InvestmentService {
 
     public InvestmentTransaction addInvestmentTransaction(InvestmentTransactionRequest request){
 
+        BigDecimal quantity = getCurrentQuantity(request.symbol());
+
+        if (quantity.compareTo(request.quantity()) < 0 && request.operationType() == InvestmentOperationType.SELL){
+            throw new InsufficientInvestmentQuantityException();
+        }
+
+
         InvestmentTransaction investmentTransaction = new InvestmentTransaction(
-                request.symbol(),
-                request.investmentType(),
-                request.operationType(),
-                request.quantity(),
-                request.pricePerUnit(),
-                request.date());
+                    request.symbol(),
+                    request.investmentType(),
+                    request.operationType(),
+                    request.quantity(),
+                    request.pricePerUnit(),
+                    request.date());
 
         return repository.save(investmentTransaction);
+
     }
 
     public List<InvestmentTransaction> getAllInvestmentTransactions(){
@@ -54,6 +63,14 @@ class InvestmentService {
         transaction.setDate(request.date());
 
         return transaction;
+    }
+
+    public BigDecimal getCurrentQuantity(String symbol){
+        return repository.getCurrentQuantity(symbol);
+    }
+
+    public BigDecimal getNetInvestedAmount(String symbol){
+        return repository.getNetInvestedAmount(symbol);
     }
 
 }
