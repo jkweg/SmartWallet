@@ -10,9 +10,11 @@ import java.util.List;
 class InvestmentService {
 
     private final InvestmentRepository repository;
+    private final TwelveDataClient twelveDataClient;
 
-    InvestmentService(InvestmentRepository repository){
+    InvestmentService(InvestmentRepository repository, TwelveDataClient twelveDataClient){
         this.repository = repository;
+        this.twelveDataClient = twelveDataClient;
     }
 
 
@@ -71,6 +73,27 @@ class InvestmentService {
 
     public BigDecimal getNetInvestedAmount(String symbol){
         return repository.getNetInvestedAmount(symbol);
+    }
+
+    public BigDecimal getCurrentPrice(String symbol){
+        return twelveDataClient.getCurrentPrice(symbol);
+    }
+
+    public InvestmentPositionSummary getPositionSummary( String symbol ) {
+
+        BigDecimal currentQuantity = getCurrentQuantity(symbol);
+        BigDecimal netInvestedAmount = getNetInvestedAmount(symbol);
+        BigDecimal currentPrice = getCurrentPrice(symbol);
+        BigDecimal currentValue = currentQuantity.multiply(currentPrice);
+        BigDecimal profitLoss = currentValue.subtract(netInvestedAmount);
+
+        return new InvestmentPositionSummary(
+                currentQuantity,
+                netInvestedAmount,
+                currentPrice,
+                currentValue,
+                profitLoss);
+
     }
 
 }

@@ -56,4 +56,15 @@ class InvestmentController {
         return service.getNetInvestedAmount(symbol);
     }
 
+    @GetMapping("/{symbol}/current-price")
+    BigDecimal getCurrentPrice(@PathVariable String symbol){
+        return service.getCurrentPrice(symbol);
+    }
+
+    @GetMapping("/{symbol}/summary")
+    InvestmentPositionSummary getPositionSummary(@PathVariable String symbol){
+        return service.getPositionSummary(symbol);
+    }
+
+
 }
