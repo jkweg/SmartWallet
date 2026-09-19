@@ -3,6 +3,7 @@ package com.jkweg.smartwallet.investment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
 
@@ -22,18 +23,24 @@ class TwelveDataClient {
 
     BigDecimal getCurrentPrice(String symbol){
 
-        String price;
+        try {
+            TwelveDataPriceResponse response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/price").
+                            queryParam("symbol",symbol).
+                            queryParam("apikey",apiKey).
+                            build())
+                    .retrieve()
+                    .body(TwelveDataPriceResponse.class);
 
-        TwelveDataPriceResponse response = restClient.get()
-                .uri(uriBuilder -> uriBuilder.path("/price").
-                        queryParam("symbol",symbol).
-                        queryParam("apikey",apiKey).
-                        build())
-                .retrieve()
-                .body(TwelveDataPriceResponse.class);
+            if ( response == null) throw new MarketDataException("Market data response is empty");
+            if ( response.price() == null) throw new MarketDataException("Market data response is empty");
 
 
-        return new BigDecimal(response.price());
+            return new BigDecimal(response.price());
+        }
+        catch (RestClientResponseException e){
+            throw new MarketDataException("Could not fetch market data");
+        }
 
     }
 
