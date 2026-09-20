@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/transactions")
 class TransactionController {
@@ -59,6 +60,16 @@ class TransactionController {
     @GetMapping("/summary")
     TransactionSummary getSummary(){
         return service.getSummary();
+    }
+
+    @GetMapping("/types")
+    List<TransactionType> getAllTransactionTypes(){
+        return List.of(TransactionType.values());
+    }
+
+    @GetMapping("/categories")
+    List<TransactionCategory> getAllTransactionCategories(){
+        return List.of(TransactionCategory.values());
     }
 
 
