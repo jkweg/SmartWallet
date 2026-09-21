@@ -11,7 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d smartwallet"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d smartwallet" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,6 +32,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+  frontend:
+    build:
+      context: ./Frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
 volumes:
   postgres_data:
