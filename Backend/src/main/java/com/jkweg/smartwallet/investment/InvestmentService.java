@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.List;
+import java.util.*;
 
 @Service
 class InvestmentService {
@@ -94,6 +94,46 @@ class InvestmentService {
                 currentPrice,
                 currentValue.setScale(2, RoundingMode.HALF_UP),
                 profitLoss.setScale(2, RoundingMode.HALF_UP));
+
+    }
+
+    public Set<String> getAllInvestedSymbols(){
+
+        Set<String> symbols = new HashSet<>();
+
+        List<InvestmentTransaction> transactions = repository.findAll();
+        for( InvestmentTransaction transaction : transactions){
+            symbols.add(transaction.getSymbol());
+        }
+
+        return symbols;
+    }
+
+    public InvestmentPortfolioSummary getInvestmentPortfolioSummary(){
+
+        Set<String> symbols = getAllInvestedSymbols();
+        BigDecimal totalInvested = BigDecimal.ZERO;
+        BigDecimal currentValue = BigDecimal.ZERO;
+        int openPositions = 0;
+
+        for( String symbol : symbols){
+            BigDecimal currentQuantity = getCurrentQuantity(symbol);
+            if(currentQuantity.compareTo(BigDecimal.ZERO) <= 0){
+                continue;
+            }
+
+            openPositions += 1;
+            BigDecimal netInvestedAmount = getNetInvestedAmount(symbol);
+            BigDecimal currentPrice = getCurrentPrice(symbol);
+            BigDecimal positionValue = currentQuantity.multiply(currentPrice);
+
+            totalInvested = totalInvested.add(netInvestedAmount);
+            currentValue = currentValue.add(positionValue);
+        }
+
+        BigDecimal profitLoss = currentValue.subtract(totalInvested);
+
+        return new InvestmentPortfolioSummary(totalInvested.setScale(2, RoundingMode.HALF_UP), currentValue.setScale(2, RoundingMode.HALF_UP), profitLoss.setScale(2, RoundingMode.HALF_UP), openPositions);
 
     }
 

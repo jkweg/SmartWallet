@@ -41,6 +41,8 @@ main {
   gap: 20px;
 }
 
+.portfolio-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
 .summary-card, .transactions-section, .investments-section, .expense-chart {
   padding: 24px;
   background: #fff;
@@ -166,6 +168,9 @@ td.description {
   font-variant-numeric: tabular-nums;
 }
 
+.positive { color: #237a43; }
+.negative { color: #a02c2c; }
+
 .empty-state, .muted {
   color: #596577;
   font-size: 13px;
@@ -239,6 +244,7 @@ td.empty-state { padding: 20px; text-align: center; }
 .bar { height: 100%; background: #69819d; border-radius: 3px; }
 
 @media (max-width: 900px) {
+  .portfolio-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section-grid { grid-template-columns: 1fr; gap: 24px; }
   .position-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

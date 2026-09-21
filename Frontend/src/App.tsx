@@ -34,6 +34,13 @@ type InvestmentPositionSummary = {
   profitLoss: number
 }
 
+type InvestmentPortfolioSummary = {
+  totalInvested: number
+  currentValue: number
+  profitLoss: number
+  openPositions: number
+}
+
 type TransactionForm = {
   amount: string
   type: string
@@ -99,6 +106,8 @@ function App() {
 
   const [investmentSummary, setInvestmentSummary] = useState<InvestmentPositionSummary | null>(null)
 
+  const [portfolioSummary, setPortfolioSummary] = useState<InvestmentPortfolioSummary | null>(null)
+
   const [transactionTypes, setTransactionTypes] = useState<string[]>([])
 
   const [transactionCategories, setTransactionCategories] = useState<string[]>([])
@@ -130,10 +139,18 @@ function App() {
       .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
   }
 
+  const fetchPortfolioSummary = () => {
+    fetch('http://localhost:8080/investments/portfolio-summary')
+      .then(readResponse<InvestmentPortfolioSummary>)
+      .then(data => setPortfolioSummary(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
+  }
+
   useEffect(() => {
     fetchSummary()
     fetchTransactions()
     fetchInvestments()
+    fetchPortfolioSummary()
   }, [])
 
   useEffect(() => {
@@ -201,6 +218,7 @@ function App() {
       })
       if (!response.ok) throw new Error('Investment rejected')
       fetchInvestments()
+      fetchPortfolioSummary()
       setInvestmentForm({ symbol: '', investmentType: 'STOCK', operationType: 'BUY', quantity: "", pricePerUnit: "", date: '' })
     } catch {
       setInvestmentError('Could not add the investment. Check the fields and backend connection, then try again.')
@@ -263,7 +281,34 @@ function App() {
 
               <div className="summary-card">
                 <h3>Balance</h3>
-                <p>{summary ? formatMoney(summary.balance) + ' PLN' : '—'}</p>
+                <p>{summary ? <><span className={summary.balance > 0 ? 'positive' : summary.balance < 0 ? 'negative' : undefined}>{formatMoney(summary.balance)}</span> PLN</> : '—'}</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="summary-section" aria-labelledby="portfolio-summary-title">
+            <h2 id="portfolio-summary-title">Investment portfolio</h2>
+            <div className="summary-grid portfolio-summary-grid">
+              <div className="summary-card">
+                <h3>Total invested</h3>
+                <p>{portfolioSummary ? formatMoney(portfolioSummary.totalInvested) : '—'}</p>
+              </div>
+
+              <div className="summary-card">
+                <h3>Current value</h3>
+                <p>{portfolioSummary ? formatMoney(portfolioSummary.currentValue) : '—'}</p>
+              </div>
+
+              <div className="summary-card">
+                <h3>Profit / Loss</h3>
+                <p className={portfolioSummary && portfolioSummary.profitLoss > 0 ? 'positive' : portfolioSummary && portfolioSummary.profitLoss < 0 ? 'negative' : undefined}>
+                  {portfolioSummary ? (portfolioSummary.profitLoss > 0 ? '+' : '') + formatMoney(portfolioSummary.profitLoss) : '—'}
+                </p>
+              </div>
+
+              <div className="summary-card">
+                <h3>Open positions</h3>
+                <p>{portfolioSummary ? portfolioSummary.openPositions : '—'}</p>
               </div>
             </div>
           </section>
@@ -534,7 +579,9 @@ function App() {
 
                   <div className="position-stat">
                     <span>Profit / Loss</span>
-                    <strong>{formatNumber(investmentSummary.profitLoss)}</strong>
+                    <strong className={investmentSummary.profitLoss > 0 ? 'positive' : investmentSummary.profitLoss < 0 ? 'negative' : undefined}>
+                      {investmentSummary.profitLoss > 0 ? '+' : ''}{formatNumber(investmentSummary.profitLoss)}
+                    </strong>
                   </div>
                 </div>
               )}

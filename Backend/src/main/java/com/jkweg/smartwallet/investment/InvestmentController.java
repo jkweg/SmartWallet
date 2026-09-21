@@ -77,4 +77,11 @@ class InvestmentController {
         return List.of(InvestmentOperationType.values());
     }
 
+    @GetMapping("/portfolio-summary")
+    InvestmentPortfolioSummary getPortfolioSummary(){
+        return service.getInvestmentPortfolioSummary();
+    }
+
+
+
 }
