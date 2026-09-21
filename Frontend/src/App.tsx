@@ -1,4 +1,5 @@
-import { useEffect , useState } from "react"
+import { useEffect, useState } from "react"
+import './App.css'
 
 type TransactionSummary = {
   totalIncome: number
@@ -34,7 +35,7 @@ type InvestmentPositionSummary = {
 }
 
 type TransactionForm = {
-  amount: number
+  amount: string
   type: string
   category: string
   date: string
@@ -45,39 +46,54 @@ type InvestmentForm = {
   symbol: string
   investmentType: string
   operationType: string
-  quantity: number
-  pricePerUnit: number
+  quantity: string
+  pricePerUnit: string
   date: string
 }
 
-function App() {
-  console.log("APP RENDER")
+const formatMoney = (value: number) =>
+  value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  const [summary, setSummary] = useState<TransactionSummary>({
-    totalIncome: 0,
-    totalExpenses: 0,
-    balance: 0
-  })
+const formatNumber = (value: number) =>
+  value.toLocaleString('en-GB', { maximumFractionDigits: 8 })
+
+async function readResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) throw new Error('Request failed')
+  return response.json()
+}
+
+function App() {
+
+  const [summary, setSummary] = useState<TransactionSummary | null>(null)
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
 
   const [form, setForm] = useState<TransactionForm>({
-  amount: 0,
-  type: "EXPENSE",
-  category: "OTHER",
-  date: "",
-  description: ""
-})
+    amount: "",
+    type: "EXPENSE",
+    category: "OTHER",
+    date: "",
+    description: ""
+  })
 
   const [investmentForm, setInvestmentForm] = useState<InvestmentForm>(
     {
       symbol: "",
       investmentType: "STOCK",
       operationType: "BUY",
-      quantity: 0,
-      pricePerUnit: 0,
+      quantity: "",
+      pricePerUnit: "",
       date: ""
-      })
+    })
+
+  const [transactionError, setTransactionError] = useState('')
+  const [investmentError, setInvestmentError] = useState('')
+  const [summaryError, setSummaryError] = useState('')
+  const [dataError, setDataError] = useState('')
+  const [savingTransaction, setSavingTransaction] = useState(false)
+  const [savingInvestment, setSavingInvestment] = useState(false)
+  const [loadingSummary, setLoadingSummary] = useState(false)
+  const [loadedSymbol, setLoadedSymbol] = useState('')
 
   const [summarySymbol, setSummarySymbol] = useState("")
 
@@ -94,278 +110,438 @@ function App() {
   const [investmentOperationTypes, setInvestmentOperationTypes] = useState<string[]>([])
 
   const fetchSummary = () => {
-  fetch('http://localhost:8080/transactions/summary')
-    .then(response => response.json())
-    .then(data => setSummary(data))
+    fetch('http://localhost:8080/transactions/summary')
+      .then(readResponse<TransactionSummary>)
+      .then(data => setSummary(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
   }
 
   const fetchTransactions = () => {
-  fetch('http://localhost:8080/transactions')
-    .then(response => response.json())
-    .then(data => setTransactions(data))
-  }
-
-  useEffect(() => {
-  fetchSummary()
-  fetchTransactions()
-  fetchInvestments()
-  }, [])
-
-  useEffect(() => {
-    fetch('http://localhost:8080/transactions/types')
-    .then(response => response.json())
-    .then(data => setTransactionTypes(data))
-  }, [])
-
-  useEffect(() => {
-    fetch('http://localhost:8080/transactions/categories')
-    .then(response => response.json())
-    .then(data => setTransactionCategories(data))
-  }, [])
-
-  useEffect(() => {
-    fetch('http://localhost:8080/investments/types')
-    .then(response => response.json())
-    .then(data => setInvestmentTypes(data))
-  },[])
-
-  useEffect(() => {
-    fetch('http://localhost:8080/investments/operation-types')
-    .then(response => response.json())
-    .then(data => setInvestmentOperationTypes(data))
-  },[])
-
-
-  
-  
-  const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault()
-
-  fetch('http://localhost:8080/transactions', {
-    method: "POST",
-    body: JSON.stringify(form),
-    headers: {
-      "Content-Type": "application/json"
-    }
-  })
-    .then(response => {
-      if (response.ok) {
-        fetchTransactions()
-        fetchSummary()
-        setForm({
-          amount: 0,
-          type: "EXPENSE",
-          category: "OTHER",
-          date: "",
-          description: ""
-})
-      }
-    })
+    fetch('http://localhost:8080/transactions')
+      .then(readResponse<Transaction[]>)
+      .then(data => setTransactions(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
   }
 
   const fetchInvestments = () => {
     fetch('http://localhost:8080/investments')
-    .then(response => response.json())
-    .then(data => setInvestments(data))
+      .then(readResponse<InvestmentTransaction[]>)
+      .then(data => setInvestments(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
   }
 
-  const handleInvestmentSubmit = (e: React.FormEvent) => {
-  e.preventDefault()
+  useEffect(() => {
+    fetchSummary()
+    fetchTransactions()
+    fetchInvestments()
+  }, [])
 
-  fetch('http://localhost:8080/investments', {
-    method: "POST",
-    body: JSON.stringify(investmentForm),
-    headers: {
-      "Content-Type": "application/json"
+  useEffect(() => {
+    fetch('http://localhost:8080/transactions/types')
+      .then(readResponse<string[]>)
+      .then(data => setTransactionTypes(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
+  }, [])
+
+  useEffect(() => {
+    fetch('http://localhost:8080/transactions/categories')
+      .then(readResponse<string[]>)
+      .then(data => setTransactionCategories(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
+  }, [])
+
+  useEffect(() => {
+    fetch('http://localhost:8080/investments/types')
+      .then(readResponse<string[]>)
+      .then(data => setInvestmentTypes(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
+  }, [])
+
+  useEffect(() => {
+    fetch('http://localhost:8080/investments/operation-types')
+      .then(readResponse<string[]>)
+      .then(data => setInvestmentOperationTypes(data))
+      .catch(() => setDataError('Some data could not be loaded. Check the backend connection and reload the page.'))
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setTransactionError('')
+    setSavingTransaction(true)
+    try {
+      const response = await fetch('http://localhost:8080/transactions', {
+        method: 'POST',
+        body: JSON.stringify({ ...form, amount: Number(form.amount) }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      if (!response.ok) throw new Error('Transaction rejected')
+      fetchTransactions()
+      fetchSummary()
+      setForm({ amount: "", type: 'EXPENSE', category: 'OTHER', date: '', description: '' })
+    } catch {
+      setTransactionError('Could not add the transaction. Check the fields and backend connection, then try again.')
+    } finally {
+      setSavingTransaction(false)
     }
-  })
-    .then(response => {
-      if (response.ok) {
-        fetchInvestments()
-        setInvestmentForm({
-          symbol: "",
-          investmentType: "STOCK",
-          operationType: "BUY",
-          quantity: 0,
-          pricePerUnit: 0,
-          date: ""
-        })
-      }
-    })
   }
 
-  const fetchInvestmentSummary = () => {
-  fetch(`http://localhost:8080/investments/${summarySymbol}/summary`)
-    .then(response => response.json())
-    .then(data => setInvestmentSummary(data))
+  const handleInvestmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setInvestmentError('')
+    setSavingInvestment(true)
+    try {
+      const response = await fetch('http://localhost:8080/investments', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...investmentForm,
+          quantity: Number(investmentForm.quantity),
+          pricePerUnit: Number(investmentForm.pricePerUnit)
+        }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      if (!response.ok) throw new Error('Investment rejected')
+      fetchInvestments()
+      setInvestmentForm({ symbol: '', investmentType: 'STOCK', operationType: 'BUY', quantity: "", pricePerUnit: "", date: '' })
+    } catch {
+      setInvestmentError('Could not add the investment. Check the fields and backend connection, then try again.')
+    } finally {
+      setSavingInvestment(false)
+    }
   }
+
+  const fetchInvestmentSummary = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const symbol = summarySymbol.trim().toUpperCase()
+    setSummaryError('')
+    setInvestmentSummary(null)
+    if (!symbol) {
+      setSummaryError('Enter a symbol, for example AAPL.')
+      return
+    }
+    setLoadingSummary(true)
+    try {
+      const response = await fetch('http://localhost:8080/investments/' + encodeURIComponent(symbol) + '/summary')
+      const data = await readResponse<InvestmentPositionSummary>(response)
+      setInvestmentSummary(data)
+      setLoadedSymbol(symbol)
+    } catch {
+      setSummaryError('Could not load this position. Check the symbol and try again; the backend or price provider may be unavailable.')
+    } finally {
+      setLoadingSummary(false)
+    }
+  }
+
+  const expensesByCategory: Record<string, number> = {}
+  for (const transaction of transactions) {
+    if (transaction.type === 'EXPENSE') {
+      expensesByCategory[transaction.category] = (expensesByCategory[transaction.category] ?? 0) + transaction.amount
+    }
+  }
+  const expenseCategories = Object.entries(expensesByCategory).sort((a, b) => b[1] - a[1])
+  const largestExpense = Math.max(0, ...expenseCategories.map(([, amount]) => amount))
 
   return (
     <>
+      <div className="app">
+        <header className="header">
+          <h1>SmartWallet</h1>
+        </header>
 
-        <h1> SmartWallet działa </h1> <br />
-        <h2> Summary: </h2>
-        <p>Income: {summary.totalIncome}</p>
-        <p>Expenses: {summary.totalExpenses}</p>
-        <p>Balance: {summary.balance}</p>
+        <main>
+          {dataError && <p className="error" role="alert">{dataError}</p>}
+          <section className="summary-section" aria-label="Financial overview">
+            <div className="summary-grid">
+              <div className="summary-card">
+                <h3>Income</h3>
+                <p>{summary ? formatMoney(summary.totalIncome) + ' PLN' : '—'}</p>
+              </div>
 
-        <br />
-        <h2> Transactions: </h2>
-        {transactions.map(transaction => (
-            <div key={transaction.id}>
-                <p>Description: {transaction.description}</p>
-                <p>Amount: {transaction.amount}</p>
-                <p>Type: {transaction.type}</p>
-                <p>Category: {transaction.category}</p>
-                <p>Date: {transaction.date} </p>
-                <br />
-            </div>))}
-        
-            <form onSubmit={handleSubmit}>
-              
-              <input
-                  type="number"
-                  value={form.amount}
-                  onChange={(e) => 
-                      setForm({...form,amount: Number(e.target.value)})
-                  }
-              />
-              <br />
-              <input 
-                  type="text" 
-                  value={form.description}
-                  onChange={(e) => 
-                    setForm({...form, description: String(e.target.value)})
-                  }
-              />
-              <br />
-              <input 
-                type="date"
-                value={form.date}
-                onChange={(e) =>
-                  setForm({...form, date: String(e.target.value)})
-                } 
-              />
+              <div className="summary-card">
+                <h3>Expenses</h3>
+                <p>{summary ? formatMoney(summary.totalExpenses) + ' PLN' : '—'}</p>
+              </div>
 
-              <br />
-              <select
-                value={form.type}
-                onChange={(e) => 
-                    setForm({...form, type: e.target.value
-                    })
-                }
-              >
-                {transactionTypes.map(type => (
-                  <option key={type} value={type}> {type} </option>
+              <div className="summary-card">
+                <h3>Balance</h3>
+                <p>{summary ? formatMoney(summary.balance) + ' PLN' : '—'}</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="expense-chart" aria-labelledby="expense-chart-title">
+            <h2 id="expense-chart-title">Expenses by category</h2>
+            {expenseCategories.length ? (
+              <ul className="chart-list">
+                {expenseCategories.map(([category, amount]) => (
+                  <li key={category} className="chart-row">
+                    <span>{category}</span>
+                    <div className="bar-track" aria-hidden="true">
+                      <div className="bar" style={{ width: (largestExpense > 0 ? amount / largestExpense * 100 : 0) + '%' }} />
+                    </div>
+                    <span className="numeric">{formatMoney(amount)} PLN</span>
+                  </li>
                 ))}
-              </select>
-              
-              <br />
-              <select
-                value={form.category}
-                onChange={(e) => 
-                    setForm({...form, category: e.target.value
-                    })
-                }
-              >
-                {transactionCategories.map(category => (
-                  <option key={category} value={category}> {category} </option>
-                ))}
-              </select>
-            <br />
-            <button type="submit">Add transaction</button>
-            
-            </form>
-      <h2> Investments </h2>
-      <br />
-      {investments.map(investment => (
+              </ul>
+            ) : <p className="empty-state">Add an expense to see spending by category.</p>}
+          </section>
 
-          <div key={investment.id}>
-                <p>Symbol: {investment.symbol}</p>
-                <p>InvestmentType: {investment.investmentType}</p>
-                <p>OperationType: {investment.operationType}</p>
-                <p>Quantity: {investment.quantity}</p>
-                <p>PricePerUnit: {investment.pricePerUnit}</p>
-                <p>Date: {investment.date}</p>
-                <br />
-          </div>
-      ))}  
+          <section className="transactions-section">
+            <h2>Transactions</h2>
 
-      <form onSubmit={handleInvestmentSubmit}>
+            <div className="section-grid">
 
-          <input 
-            type="text" 
-            value={investmentForm.symbol}
-            onChange={(e) => setInvestmentForm({...investmentForm, symbol: e.target.value})}
-          />
-          <br />
-          <select 
-              value={investmentForm.investmentType}
-              onChange={(e) => setInvestmentForm({...investmentForm, investmentType:e.target.value})}>
-            {investmentTypes.map(investmentType => (
-              <option key={investmentType} value={investmentType}> {investmentType} </option>
-            ))}
+              <div className="panel">
+                <h3>Add transaction</h3>
 
-          </select>
-          <br />
-          <select
-              value={investmentForm.operationType}
-              onChange={(e) => setInvestmentForm({...investmentForm, operationType: e.target.value})}
-          >
-            {investmentOperationTypes.map(operationType => (
-              <option key={operationType} value={operationType}> {operationType} </option>
-            ))}
+                <form onSubmit={handleSubmit}>
+                  <label htmlFor="transaction-amount">Amount (PLN)
+                    <input required id="transaction-amount"
+                      type="number" min="0.00000001" step="any"
+                      value={form.amount}
+                      onChange={(e) =>
+                        setForm({ ...form, amount: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label htmlFor="transaction-description">Description
+                    <input id="transaction-description"
+                      type="text" placeholder="e.g. Weekly groceries"
+                      value={form.description}
+                      onChange={(e) =>
+                        setForm({ ...form, description: String(e.target.value) })
+                      }
+                    />
+                  </label>
+                  <label htmlFor="transaction-date">Date
+                    <input required id="transaction-date"
+                      type="date"
+                      value={form.date}
+                      onChange={(e) =>
+                        setForm({ ...form, date: String(e.target.value) })
+                      }
+                    />
+                  </label>
+                  <label htmlFor="transaction-type">Type
+                    <select required id="transaction-type"
+                      value={form.type}
+                      onChange={(e) =>
+                        setForm({
+                          ...form, type: e.target.value
+                        })
+                      }
+                    >
+                      {transactionTypes.map(type => (
+                        <option key={type} value={type}> {type} </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label htmlFor="transaction-category">Category
+                    <select required id="transaction-category"
+                      value={form.category}
+                      onChange={(e) =>
+                        setForm({
+                          ...form, category: e.target.value
+                        })
+                      }
+                    >
+                      {transactionCategories.map(category => (
+                        <option key={category} value={category}> {category} </option>
+                      ))}
+                    </select>
+                  </label>
 
-          </select>
-          <br />
-          <input 
-            type= "number" 
-            value={investmentForm.quantity}
-            onChange={(e) => setInvestmentForm({...investmentForm, quantity: Number(e.target.value)})}
-          />
-          <br />
-          <input 
-            type="number"
-            value={investmentForm.pricePerUnit}
-            onChange={(e) => setInvestmentForm({...investmentForm, pricePerUnit: Number(e.target.value)})}
-          />
-          <br />
-          <input 
-            type="date"
-            value={investmentForm.date}
-            onChange={(e) => setInvestmentForm({...investmentForm, date: String(e.target.value)})}
-          />
-          
-          <br />
-          <br />
-          <button type="submit">Add investment</button>
-      </form>
-      <br />
-      <br />
+                  {transactionError && <p className="error" role="alert">{transactionError}</p>}
+                  <button type="submit" disabled={savingTransaction || !transactionTypes.length || !transactionCategories.length}>
+                    {savingTransaction ? 'Saving…' : 'Add transaction'}
+                  </button>
 
-      <input
-        type="text"
-        value={summarySymbol}
-        onChange={(e) => setSummarySymbol(e.target.value)}
-      />
-      <br />
-      <button type="button" onClick={fetchInvestmentSummary}>
-                    Show summary
-      </button>
-      <br />
-      {investmentSummary && (
-          <div>
-            
-            <h2> Summary: </h2>
-            
-            <p>Current quantity: {investmentSummary.currentQuantity}</p>
-            <p>Net invested amount: {investmentSummary.netInvestedAmount}</p>
-            <p>Current price: {investmentSummary.currentPrice}</p>
-            <p>Current value: {investmentSummary.currentValue}</p>
-            <p>Profit / Loss: {investmentSummary.profitLoss}</p>
-          </div>
-)}
+                </form>
+              </div>
 
+              <div className="panel">
+                <h3>Transaction history</h3>
+                <div className="history-list" tabIndex={0} role="region" aria-label="Transaction history">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Description</th>
+                        <th scope="col" className="numeric">Amount</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map(transaction => (
+                        <tr key={transaction.id}>
+                          <td className="description">{transaction.description || '—'}</td>
+                          <td className="numeric">{formatMoney(transaction.amount)} PLN</td>
+                          <td>{transaction.type}</td>
+                          <td>{transaction.category}</td>
+                          <td>{transaction.date}</td>
+                        </tr>
+                      ))}
+                      {!transactions.length && <tr><td colSpan={5} className="empty-state">No transactions to display.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+          </section>
+
+          <section className="investments-section">
+            <h2>Investments</h2>
+
+            <div className="section-grid">
+
+              <div className="panel">
+                <h3>Add investment</h3>
+
+                <form onSubmit={handleInvestmentSubmit}>
+                  <label htmlFor="investment-symbol">Symbol
+                    <input required id="investment-symbol"
+                      type="text" placeholder="e.g. AAPL"
+                      value={investmentForm.symbol}
+                      onChange={(e) => setInvestmentForm({ ...investmentForm, symbol: e.target.value })}
+                    />
+                  </label>
+                  <label htmlFor="investment-type">Investment type
+                    <select required id="investment-type"
+                      value={investmentForm.investmentType}
+                      onChange={(e) => setInvestmentForm({ ...investmentForm, investmentType: e.target.value })}>
+                      {investmentTypes.map(investmentType => (
+                        <option key={investmentType} value={investmentType}> {investmentType} </option>
+                      ))}
+
+                    </select>
+                  </label>
+                  <label htmlFor="investment-operation">Operation
+                    <select required id="investment-operation"
+                      value={investmentForm.operationType}
+                      onChange={(e) => setInvestmentForm({ ...investmentForm, operationType: e.target.value })}
+                    >
+                      {investmentOperationTypes.map(operationType => (
+                        <option key={operationType} value={operationType}> {operationType} </option>
+                      ))}
+
+                    </select>
+                  </label>
+                  <label htmlFor="investment-quantity">Quantity
+                    <input required id="investment-quantity"
+                      type="number" min="0.00000001" step="any"
+                      value={investmentForm.quantity}
+                      onChange={(e) => setInvestmentForm({ ...investmentForm, quantity: e.target.value })}
+                    />
+                  </label>
+                  <label htmlFor="investment-price">Price per unit
+                    <input required id="investment-price"
+                      type="number" min="0.00000001" step="any"
+                      value={investmentForm.pricePerUnit}
+                      onChange={(e) => setInvestmentForm({ ...investmentForm, pricePerUnit: e.target.value })}
+                    />
+                  </label>
+                  <label htmlFor="investment-date">Date
+                    <input required id="investment-date"
+                      type="date"
+                      value={investmentForm.date}
+                      onChange={(e) => setInvestmentForm({ ...investmentForm, date: String(e.target.value) })}
+                    />
+                  </label>
+
+                  {investmentError && <p className="error" role="alert">{investmentError}</p>}
+                  <button type="submit" disabled={savingInvestment || !investmentTypes.length || !investmentOperationTypes.length}>
+                    {savingInvestment ? 'Saving…' : 'Add investment'}
+                  </button>
+                </form>
+              </div>
+
+              <div className="panel">
+                <h3>Investment history</h3>
+                <div className="history-list" tabIndex={0} role="region" aria-label="Investment history">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Symbol</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Operation</th>
+                        <th scope="col" className="numeric">Quantity</th>
+                        <th scope="col" className="numeric">Unit price</th>
+                        <th scope="col">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {investments.map(investment => (
+                        <tr key={investment.id}>
+                          <td>{investment.symbol}</td>
+                          <td>{investment.investmentType}</td>
+                          <td>{investment.operationType}</td>
+                          <td className="numeric">{formatNumber(investment.quantity)}</td>
+                          <td className="numeric">{formatNumber(investment.pricePerUnit)}</td>
+                          <td>{investment.date}</td>
+                        </tr>
+                      ))}
+                      {!investments.length && <tr><td colSpan={6} className="empty-state">No investments to display.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+            <div className="position-summary-card">
+              <h3>Position summary</h3>
+
+              <form className="summary-search" onSubmit={fetchInvestmentSummary}>
+                <label htmlFor="summary-symbol">Symbol
+                  <input required id="summary-symbol"
+                    type="text" disabled={loadingSummary}
+                    placeholder="Symbol, e.g. AAPL"
+                    value={summarySymbol}
+                    onChange={(e) => setSummarySymbol(e.target.value)}
+                  />
+                </label>
+
+                <button type="submit" disabled={loadingSummary}>
+                  {loadingSummary ? 'Loading…' : 'Show summary'}
+                </button>
+              </form>
+              {loadingSummary && <p className="muted" role="status">Fetching the position and current market price…</p>}
+              {summaryError && <p className="error" role="alert">{summaryError}</p>}
+              {investmentSummary && <p className="muted">Position: <strong>{loadedSymbol}</strong></p>}
+
+              {investmentSummary && (
+                <div className="position-summary-grid">
+                  <div className="position-stat">
+                    <span>Quantity</span>
+                    <strong>{formatNumber(investmentSummary.currentQuantity)}</strong>
+                  </div>
+
+                  <div className="position-stat">
+                    <span>Invested</span>
+                    <strong>{formatNumber(investmentSummary.netInvestedAmount)}</strong>
+                  </div>
+
+                  <div className="position-stat">
+                    <span>Current price</span>
+                    <strong>{formatNumber(investmentSummary.currentPrice)}</strong>
+                  </div>
+
+                  <div className="position-stat">
+                    <span>Current value</span>
+                    <strong>{formatNumber(investmentSummary.currentValue)}</strong>
+                  </div>
+
+                  <div className="position-stat">
+                    <span>Profit / Loss</span>
+                    <strong>{formatNumber(investmentSummary.profitLoss)}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </main>
+      </div>
     </>
   )
 }
