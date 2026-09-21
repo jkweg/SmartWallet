@@ -67,5 +67,14 @@ class InvestmentController {
         return service.getPositionSummary(symbol);
     }
 
+    @GetMapping("/types")
+    List<InvestmentType> getAllInvestmentTypes(){
+        return List.of(InvestmentType.values());
+    }
+
+    @GetMapping("/operation-types")
+    List<InvestmentOperationType> getAllInvestmentOperationTypes(){
+        return List.of(InvestmentOperationType.values());
+    }
 
 }
